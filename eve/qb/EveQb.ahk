@@ -156,10 +156,10 @@ CreateDefaultConfig(filePath) {
     [Windows]
     ; 在此列出目标窗口的标题或进程名
     ; 每行一个，可以使用部分匹配
+    ; 可以使用游戏名来识别游戏窗口
     ; 示例:
-    Game.exe
-    My Game Window
-    AnotherGame
+    军用馒头
+    隔壁老王
     )"
     
     try {
