@@ -26,22 +26,26 @@ globalSettings := Map(
 ; 解析配置文件中的键值对并覆盖默认值
 try {
     foundSettings := false
-    loop read, configFile {
-        if InStr(A_LoopReadLine, "[Settings]") {
+    configContent := FileRead(configFile, "UTF-8")  ; 显式指定编码
+    configContent := StrReplace(configContent, "`r")  ; 移除回车符
+    configContent := RegExReplace(configContent, "^\xFEFF", "")  ; 移除BOM头
+    loop parse configContent, "`n" {
+        currentLine := Trim(A_LoopField)
+        if InStr(currentLine, "[Settings]") {
             foundSettings := true
             continue
         }
         ; 遇到下一个节头时停止读取
-        if foundSettings && RegExMatch(A_LoopReadLine, "^\[") {
+        if foundSettings && RegExMatch(currentLine, "^\[") {
             break
         }
         if foundSettings {
             ; 跳过空行和注释
-            if (A_LoopReadLine = "" || InStr(A_LoopReadLine, ";")) {
+            if (currentLine = "" || InStr(currentLine, ";")) {
                 continue
             }
             ; 使用正则表达式提取键值对
-            if RegExMatch(A_LoopReadLine, "^\s*(\w+)\s*=\s*(.+?)\s*$", &match) {
+            if RegExMatch(currentLine, "^\s*(\w+)\s*=\s*(.+?)\s*$", &match) {
                 key := match[1]
                 value := match[2]
                 if globalSettings.Has(key) {
@@ -65,22 +69,33 @@ try {
 windowPatterns := []
 try {
     inWindowsSection := false
-    loop read, configFile {
-        if InStr(A_LoopReadLine, "[Windows]") {
+    configContent := FileRead(configFile, "UTF-8")  ; 显式指定编码
+    configContent := StrReplace(configContent, "`r")  ; 移除回车符
+    configContent := RegExReplace(configContent, "^\xFEFF", "")  ; 移除BOM头
+    loop parse configContent, "`n" {
+        currentLine := Trim(A_LoopField)
+        if InStr(currentLine, "[Windows]") {
             inWindowsSection := true
             continue
         }
-        if inWindowsSection && RegExMatch(A_LoopReadLine, "^\[") {
+        if inWindowsSection && RegExMatch(currentLine, "^\[") {
             break
         }
-        if inWindowsSection && A_LoopReadLine != "" && !InStr(A_LoopReadLine, ";") {
-            windowPatterns.Push(Trim(A_LoopReadLine))
+        if inWindowsSection && currentLine != "" && !InStr(currentLine, ";") {
+            MsgBox("匹配模式: " currentLine)
+            windowPatterns.Push(Trim(currentLine))
         }
     }
 } catch as e {
     MsgBox("读取窗口配置时出错: " e.Message)
     ExitApp
 }
+
+; joined := ""
+; for index, pattern in windowPatterns {
+;     joined .= (index > 1 ? ", " : "") pattern
+; }
+; MsgBox("窗口匹配模式: " joined)
 
 ; 注册全局热键
 try {
@@ -100,6 +115,8 @@ SendKeyToGames(*) {
     ; 遍历所有窗口进行匹配
     windows := WinGetList()
     for windowID in windows {
+        ; 打印窗口ID和标题
+        ; MsgBox("窗口ID: " windowID  "`n标题: " WinGetTitle("ahk_id " windowID))
         try {
             title := WinGetTitle("ahk_id " windowID)
             exeName := WinGetProcessName("ahk_id " windowID)
