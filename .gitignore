@@ -1,18 +1,29 @@
-# Build and Release Folders
-bin-debug/
-bin-release/
-[Oo]bj/
-[Bb]in/
+# AutoHotkey 编译输出
+*.exe
 
-# Other files and folders
-.settings/
+# IDE 配置文件
+.vscode/
+*.ahkproj
 
-# Executables
-*.swf
-*.air
-*.ipa
-*.apk
+# 用户配置文件（根据你的 EveQb.ini 配置需要）
+*.ini
 
-# Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`
-# should NOT be excluded as they contain compiler settings and other important
-# information for Eclipse / Flash Builder.
+# 临时文件/备份文件
+*.tmp
+*.bak
+*.log
+
+# 系统隐藏文件
+.DS_Store
+Thumbs.db
+
+# 开发工具生成文件
+/Ahk2Exe/
+/Compiled/
+
+# 依赖库目录（如果使用第三方库）
+/lib/
+/vendor/
+
+# 测试相关输出
+/test_output/
