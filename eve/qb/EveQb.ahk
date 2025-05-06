@@ -97,6 +97,19 @@ try {
 ; }
 ; MsgBox("窗口匹配模式: " joined)
 
+; 根据配置文件获取窗口标题或进程名
+; 这里可以使用正则表达式或其他匹配方式来处理复杂的窗口标题
+windowIds := GetEveWindows()
+isEmpty := true
+for key in windowIds {
+    isEmpty := false
+    break
+}
+if isEmpty {
+    MsgBox("没有找到 Eve Online 窗口，程序将退出。")
+    ExitApp
+}
+
 ; 注册全局热键
 try {
     Hotkey(globalSettings["TriggerHotkey"], SendKeyToGames)
@@ -112,11 +125,7 @@ SendKeyToGames(*) {
     ; 存储原始活动窗口
     originalWindow := WinExist("A")
     
-    ; 遍历所有窗口进行匹配
-    windows := WinGetList()
-    for windowID in windows {
-        ; 打印窗口ID和标题
-        ; MsgBox("窗口ID: " windowID  "`n标题: " WinGetTitle("ahk_id " windowID))
+    for windowID in windowIds {
         try {
             title := WinGetTitle("ahk_id " windowID)
             exeName := WinGetProcessName("ahk_id " windowID)
@@ -127,31 +136,25 @@ SendKeyToGames(*) {
                 continue
             }
             
-            ; 窗口匹配逻辑
-            for pattern in windowPatterns {
-                if (InStr(title, pattern) || InStr(exeName, pattern)) {
-                    ; 窗口激活处理
-                    if globalSettings["RequireActivation"] {
-                        try {
-                            WinActivate("ahk_id " windowID)
-                            WinWaitActive("ahk_id " windowID,, 1)
-                        }
-                    }
-                    
-                    ; 发送按键逻辑
-                    try {
-                        if globalSettings["RequireActivation"] {
-                            Send("{" globalSettings["SendKey"] "}")
-                        } else {
-                            ControlSend("{ " globalSettings["SendKey"] " }",, "ahk_id " windowID)
-                        }
-                    }
-                    
-                    ; 保持配置的发送间隔
-                    Sleep(globalSettings["DelayBetween"])
-                    break
+            ; 窗口激活处理
+            if globalSettings["RequireActivation"] {
+                try {
+                    WinActivate("ahk_id " windowID)
+                    WinWaitActive("ahk_id " windowID,, 1)
                 }
             }
+            
+            ; 发送按键逻辑
+            try {
+                if globalSettings["RequireActivation"] {
+                    Send("{" globalSettings["SendKey"] "}")
+                } else {
+                    ControlSend("{ " globalSettings["SendKey"] " }",, "ahk_id " windowID)
+                }
+            }
+            
+            ; 保持配置的发送间隔
+            Sleep(globalSettings["DelayBetween"])
         }
     }
     
@@ -159,6 +162,26 @@ SendKeyToGames(*) {
     try {
         WinActivate("ahk_id " originalWindow)
     }
+}
+
+; 函数：根据配置文件获取对应的窗口
+GetEveWindows() {
+    windows := WinGetList()
+    windowIds := []
+    for windowID in windows {
+        try {
+            title := WinGetTitle("ahk_id " windowID)
+            exeName := WinGetProcessName("ahk_id " windowID)
+            
+            ; 窗口匹配逻辑
+            for pattern in windowPatterns {
+                if (InStr(title, pattern) || InStr(exeName, pattern)) {
+                    windowIds.Push(windowID)
+                }
+            }
+        }
+    }
+    return windowIds
 }
 
 ; 函数：CreateDefaultConfig
