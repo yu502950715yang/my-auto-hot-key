@@ -1,17 +1,20 @@
+; 主配置文件路径
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 
-; 主配置文件
+; 主配置文件路径
 configFile := "EveQb.ini"
 
 ; 检查并创建默认配置文件
+; 当配置文件不存在时生成带注释的默认配置
 if !FileExist(configFile) {
     CreateDefaultConfig(configFile)
     MsgBox("已创建默认配置文件。请编辑 " configFile " 并重新运行脚本。")
     ExitApp
 }
 
-; 读取全局设置
+; 全局配置默认值
+; 使用Map结构存储可配置参数及其默认值
 globalSettings := Map(
     "TriggerHotkey", "^!F1",  ; 默认值
     "SendKey", "F1",
@@ -19,6 +22,8 @@ globalSettings := Map(
     "RequireActivation", 1
 )
 
+; 读取[Settings]配置节
+; 解析配置文件中的键值对并覆盖默认值
 try {
     foundSettings := false
     loop read, configFile {
@@ -31,9 +36,11 @@ try {
             break
         }
         if foundSettings {
+            ; 跳过空行和注释
             if (A_LoopReadLine = "" || InStr(A_LoopReadLine, ";")) {
                 continue
             }
+            ; 使用正则表达式提取键值对
             if RegExMatch(A_LoopReadLine, "^\s*(\w+)\s*=\s*(.+?)\s*$", &match) {
                 key := match[1]
                 value := match[2]
@@ -53,7 +60,8 @@ try {
     ExitApp
 }
 
-; 读取目标窗口配置
+; 读取[Windows]配置节
+; 收集窗口标题/进程名的匹配模式
 windowPatterns := []
 try {
     inWindowsSection := false
@@ -74,7 +82,7 @@ try {
     ExitApp
 }
 
-; 注册热键
+; 注册全局热键
 try {
     Hotkey(globalSettings["TriggerHotkey"], SendKeyToGames)
 } catch as e {
@@ -82,30 +90,30 @@ try {
     ExitApp
 }
 
-; 主功能：发送按键到所有匹配窗口
+; 函数：SendKeyToGames
+; 功能：向所有匹配窗口发送配置的按键
+; 参数：* (可变参数，AHK热键函数的回调参数规范)
 SendKeyToGames(*) {
     ; 存储原始活动窗口
     originalWindow := WinExist("A")
     
-    ; 获取所有窗口列表
+    ; 遍历所有窗口进行匹配
     windows := WinGetList()
-    
-    ; 遍历所有窗口
     for windowID in windows {
         try {
             title := WinGetTitle("ahk_id " windowID)
             exeName := WinGetProcessName("ahk_id " windowID)
             isVisible := WinGetMinMax("ahk_id " windowID)
             
-            ; 跳过最小化的窗口
+            ; 跳过最小化窗口
             if isVisible = -1 {
                 continue
             }
             
-            ; 检查是否匹配任何配置的模式
+            ; 窗口匹配逻辑
             for pattern in windowPatterns {
                 if (InStr(title, pattern) || InStr(exeName, pattern)) {
-                    ; 如果需要激活窗口
+                    ; 窗口激活处理
                     if globalSettings["RequireActivation"] {
                         try {
                             WinActivate("ahk_id " windowID)
@@ -113,7 +121,7 @@ SendKeyToGames(*) {
                         }
                     }
                     
-                    ; 发送配置的按键
+                    ; 发送按键逻辑
                     try {
                         if globalSettings["RequireActivation"] {
                             Send("{" globalSettings["SendKey"] "}")
@@ -122,7 +130,7 @@ SendKeyToGames(*) {
                         }
                     }
                     
-                    ; 延迟
+                    ; 保持配置的发送间隔
                     Sleep(globalSettings["DelayBetween"])
                     break
                 }
@@ -130,13 +138,15 @@ SendKeyToGames(*) {
         }
     }
     
-    ; 恢复原始活动窗口
+    ; 恢复原始窗口状态
     try {
         WinActivate("ahk_id " originalWindow)
     }
 }
 
-; 创建默认配置文件
+; 函数：CreateDefaultConfig
+; 功能：生成带注释的默认配置文件
+; 参数：filePath - 要创建的配置文件路径
 CreateDefaultConfig(filePath) {
     defaultConfig := "
     (
